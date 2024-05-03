@@ -31,16 +31,19 @@ public class WebSocketMessageController {
 
     @MessageMapping("/sendToAll")
     @SendTo("/topic/messages")
-    public Message broadcastMessage(@Payload SendMessageToAllRequest request) {
-        return messageService.sendMessageToAll(request.getSender(), request.getContent());
+    public SendMessageToAllRequest broadcastMessage(@Payload SendMessageToAllRequest request) {
+        return request;
     }
 
     @MessageMapping("/sendToUser")
     public void privateMessage(@Payload SendMessageToSingleRequest request) {
-        Message message = messageService.sendMessageToSingle(request.getSender(), request.getRecipient(), request.getContent());
+        Message message = messageService.sendMessageToSingleWithoutRabbit(request.getSender(), request.getRecipient(), request.getContent());
         User user = userRepository.findByUsername(request.getRecipient());
         if (user != null) {
-            messagingTemplate.convertAndSendToUser(user.getUsername(), "/queue/messages", message); // Adjusted to use username
+            // Ensure the username used here is exactly the same as the one used to establish the WebSocket session
+            messagingTemplate.convertAndSendToUser(user.getUsername(), "/queue/private", message);
+        } else {
+            System.err.println("No user found with username: " + request.getRecipient());
         }
     }
 }

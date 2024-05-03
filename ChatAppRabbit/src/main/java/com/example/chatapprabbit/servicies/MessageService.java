@@ -69,6 +69,19 @@ public class MessageService {
         return message;
     }
 
+    public Message sendMessageToSingleWithoutRabbit(String sendername, String recipientname, String content) {
+        User recipient = userRepository.findByUsername(recipientname);
+        User sender = userRepository.findByUsername(sendername);
+        Message message = Message.builder()
+                .sender(sender)
+                .recipient(recipient)
+                .content(content)
+                .sentAt(LocalDateTime.now())
+                .build();
+
+        return message;
+    }
+
     public List<Message> getAllMessages() {
         return messageRepository.findAll();
     }

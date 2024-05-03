@@ -28,7 +28,7 @@ const Chat = () => {
             console.log('Connected: ' + frame);
             client.subscribe('/topic/messages', function (message) {
                 const newMessage = JSON.parse(message.body);
-                setMessages(prevMessages => [...prevMessages, newMessage]);
+                //setMessages(prevMessages => [...prevMessages, newMessage]);
             });
         });
 
@@ -60,7 +60,7 @@ const Chat = () => {
             // Fetch all broadcast messages where recipient is null
             axiosMessage.get("/messages")
                 .then(response => {
-                    const broadcastMessages = response.data.filter(message => message.recipient === null);
+                    const broadcastMessages = response.data.filter(message => message.recipient === null && message.sentAt !== undefined); // Filter out messages with undefined sentAt
                     const transformedMessages = broadcastMessages.map(message => ({
                         sender: message.sender.username,
                         content: message.content,
@@ -79,15 +79,17 @@ const Chat = () => {
                     const filteredMessages = response.data.filter(message =>
                         (message.sender.id === loggedUserId && message.recipient && message.recipient.id === selectedUserId) ||
                         (message.sender.id === selectedUserId && message.recipient && message.recipient.id === loggedUserId)
-                    ).map(message => ({
-                        sender: message.sender.username,
-                        content: message.content,
-                        sentAt: message.sentAt
-                    }));
+                    ).filter(message => message.sentAt !== undefined) // Filter out messages with undefined sentAt
+                        .map(message => ({
+                            sender: message.sender.username,
+                            content: message.content,
+                            sentAt: message.sentAt
+                        }));
                     setMessages(filteredMessages);
                 })
                 .catch(error => console.error("Error fetching messages:", error));
         }
+        console.log(messages);
     };
 
 
@@ -111,9 +113,9 @@ const Chat = () => {
             messageData.recipient = selectedUser.username;
             axiosMessage.post("/messages/single", messageData)
                 .then(() => {
-                    if (stompClient && stompClient.connected) {
-                        stompClient.send("/app/sendToUser", {}, JSON.stringify(messageData));
-                    }
+
+                    stompClient.send("/app/sendToUser", {}, JSON.stringify(messageData));
+
                     setNewMessage("");
                 })
                 .catch(error => console.error("Error sending message:", error));
@@ -127,6 +129,7 @@ const Chat = () => {
                 })
                 .catch(error => console.error("Error sending message:", error));
         }
+        fetchMessages();
     };
 
     return (
@@ -135,7 +138,7 @@ const Chat = () => {
                 <Grid item xs={3}>
                     <Paper>
                         <Typography variant="h6" sx={{ m: 4 }}>
-                            Select Channel
+                            Hello, select channel for user: <span style={{ fontWeight: 'bold', color: 'red' }}>{sessionStorage.username}</span>
                         </Typography>
                         <List>
                             <ListItem button onClick={() => handleUserSelect("broadcast")} selected={selectedChannel === "broadcast"}>
